@@ -119,7 +119,8 @@ func (c *ReportClientConfig) statistics() {
 		}
 
 		// 告警分析：由于告警分析存在对定制化告警函数的调用可能性，无法预估性能，所以启用新的gorouting去执行避免不可预测的风险
-		go c.alertAnalyze(collectedData.Name, outputData)
+		
+		// go c.alertAnalyze(collectedData.Name, outputData)
 
 		// 输出最终统计数据
 		if c.OutputCaller != nil {
