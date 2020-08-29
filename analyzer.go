@@ -1,9 +1,9 @@
 package monitor
 
 import (
-	"time"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // 一个时间周期内最终统计输出的数据
@@ -19,7 +19,7 @@ type OutPutData struct {
 	// 成功总数
 	SuccessCount uint32 `json:"successCount"`
 	// 成功率
-	SuccessRate float64	`json:"successRate"`
+	SuccessRate float64 `json:"successRate"`
 	// 成功平均耗时
 	SuccessMsAver uint32 `json:"successMsAver"`
 	// 成功最大耗时
@@ -50,14 +50,11 @@ func (c *ReportClientConfig) scheduleTask() {
 	// 定时统计
 	t := time.NewTicker(time.Duration(c.StatisticalCycle) * time.Millisecond)
 	for curTime := range t.C {
-		for _, collectData := range c.collectDataMap  {
-			c.taskChannel <- &taskQueue {
-				taskType: CLEAR,
-				data: clearData {
-					Name: collectData.Name,
-					Time: curTime,
-				},
-			}
+		c.taskChannel <- &taskQueue{
+			taskType: CLEAR,
+			data: clearData{
+				Time: curTime,
+			},
 		}
 	}
 }
@@ -67,7 +64,7 @@ func (c *ReportClientConfig) statistics() {
 	// 以具体条目为单位进行统计分析
 	for collectedData := range c.statisticsChannel {
 		// 常规指标统计
-		outputData := OutPutData {}
+		outputData := OutPutData{}
 		outputData.ClientName = c.Name
 		outputData.InterfaceName = collectedData.Name
 		outputData.Count = collectedData.FailCount + collectedData.SuccessCount
@@ -80,28 +77,26 @@ func (c *ReportClientConfig) statistics() {
 		outputData.MaxMs = collectedData.MaxMs
 		outputData.MinMs = collectedData.MinMs
 		outputData.Timestamp = collectedData.Time.UTC()
-		outputData.TimeConsumingDistribution = map[string]uint32 {}
-		outputData.FailDistribution = map[string]uint32 {}
-
+		outputData.TimeConsumingDistribution = map[string]uint32{}
+		outputData.FailDistribution = map[string]uint32{}
 
 		// 时延分布统计
-		scope := (collectedData.Config.TimeConsumingDistributionMax - collectedData.Config.TimeConsumingDistributionMin) / uint32(collectedData.Config.TimeConsumingDistributionSplit - 2)
+		scope := (collectedData.Config.TimeConsumingDistributionMax - collectedData.Config.TimeConsumingDistributionMin) / uint32(collectedData.Config.TimeConsumingDistributionSplit-2)
 		// 计算第一个区间
-		outputData.TimeConsumingDistribution["<" + strconv.FormatUint(uint64(collectedData.Config.TimeConsumingDistributionMin), 10)] = collectedData.TimeConsumingDistribution[0]
+		outputData.TimeConsumingDistribution["<"+strconv.FormatUint(uint64(collectedData.Config.TimeConsumingDistributionMin), 10)] = collectedData.TimeConsumingDistribution[0]
 		// 计算最后一个区间
-		outputData.TimeConsumingDistribution[">" + strconv.FormatUint(uint64(collectedData.Config.TimeConsumingDistributionMax), 10)] = collectedData.TimeConsumingDistribution[collectedData.Config.TimeConsumingDistributionSplit - 1]
+		outputData.TimeConsumingDistribution[">"+strconv.FormatUint(uint64(collectedData.Config.TimeConsumingDistributionMax), 10)] = collectedData.TimeConsumingDistribution[collectedData.Config.TimeConsumingDistributionSplit-1]
 		// 计算剩余区间
-		for i := 1; i < collectedData.Config.TimeConsumingDistributionSplit - 1; i++ {
-			start := int(collectedData.Config.TimeConsumingDistributionMin + uint32(i - 1) * scope)
+		for i := 1; i < collectedData.Config.TimeConsumingDistributionSplit-1; i++ {
+			start := int(collectedData.Config.TimeConsumingDistributionMin + uint32(i-1)*scope)
 			var end int
-			if i == collectedData.Config.TimeConsumingDistributionSplit - 1 {
+			if i == collectedData.Config.TimeConsumingDistributionSplit-1 {
 				end = int(collectedData.Config.TimeConsumingDistributionMax)
 			} else {
-				end = int(collectedData.Config.TimeConsumingDistributionMin + uint32(i) * scope)
+				end = int(collectedData.Config.TimeConsumingDistributionMin + uint32(i)*scope)
 			}
-			outputData.TimeConsumingDistribution[strconv.Itoa(start) + "~" + strconv.Itoa(end)] = collectedData.TimeConsumingDistribution[i]
+			outputData.TimeConsumingDistribution[strconv.Itoa(start)+"~"+strconv.Itoa(end)] = collectedData.TimeConsumingDistribution[i]
 		}
-
 
 		// 失败分布统计
 		for status, count := range collectedData.FailDistribution {
@@ -119,7 +114,6 @@ func (c *ReportClientConfig) statistics() {
 		}
 
 		// 告警分析：由于告警分析存在对定制化告警函数的调用可能性，无法预估性能，所以启用新的gorouting去执行避免不可预测的风险
-		
 		// go c.alertAnalyze(collectedData.Name, outputData)
 
 		// 输出最终统计数据
@@ -135,13 +129,13 @@ func (c *ReportClientConfig) statistics() {
 func (c *ReportClientConfig) alertAnalyze(entryName string, outputData OutPutData) {
 	// 时延达标率告警和恢复分析
 	if _, ok := c.recentFastRateStatus[entryName]; !ok {
-		c.recentFastRateStatus[entryName] = &alertStatus {
+		c.recentFastRateStatus[entryName] = &alertStatus{
 			recentAlertOutput: make([]OutPutData, 0),
 		}
 	}
 	curFastRateStatus := c.recentFastRateStatus[entryName]
 	if _, ok := c.recentSuccessRateStatus[entryName]; !ok {
-		c.recentSuccessRateStatus[entryName] = &alertStatus {
+		c.recentSuccessRateStatus[entryName] = &alertStatus{
 			recentAlertOutput: make([]OutPutData, 0),
 		}
 	}
